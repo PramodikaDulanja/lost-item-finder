@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: lost-item-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
