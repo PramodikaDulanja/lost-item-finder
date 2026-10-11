@@ -23,24 +23,25 @@ export default function ReportLostPage() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [dateLost, setDateLost] = useState("");
 
   // UI State
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [maxDateTime, setMaxDateTime] = useState("");
 
-  const [dateLost, setDateLost] = useState("");
-
   // Safely generate the current time only on the client
   useEffect(() => {
     setMaxDateTime(new Date().toISOString().slice(0, 16));
   }, []);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
+    setMessage("");
 
     const formData = {
+      itemType: "lost", // <--- Explicitly tagged as a lost item report
       itemName,
       category,
       description,
@@ -49,14 +50,42 @@ export default function ReportLostPage() {
       imageUrls,
     };
 
-    console.log("Submitting Lost Report:", formData);
+    try {
+      const response = await fetch("http://localhost:8000/api/items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    setTimeout(() => {
-      setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to submit report");
+      }
+
+      const data = await response.json();
+      console.log("Saved to Database:", data);
       setMessage(
-        "Report form is working! Image uploaded to Cloudinary successfully. FastAPI Backend connection coming soon.",
+        "Success! Your lost item report has been saved to PostgreSQL[cite: 5].",
       );
-    }, 1000);
+
+      // Clear the form fields after successful save
+      setItemName("");
+      setCategory("");
+      setDescription("");
+      setLocation("");
+      setDateLost("");
+      setImageUrls([]);
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      setMessage(
+        error.message ||
+          "Failed to save report. Make sure your FastAPI backend is running.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inputClass =
@@ -123,7 +152,7 @@ export default function ReportLostPage() {
                 </div>
 
                 <p className="mt-2 text-xs text-slate-400">
-                  Item information · Last known location · Photo
+                  Item information · Last known location · Photos
                 </p>
               </div>
 
@@ -288,13 +317,13 @@ export default function ReportLostPage() {
                       03
                     </span>
                     <h3 className="font-bold text-slate-900">
-                      Add an item photo
+                      Add item photos
                     </h3>
                   </div>
 
                   <p className="mb-4 text-sm leading-6 text-slate-500">
-                    Upload a photo of the missing item if you have one. A clear
-                    photo improves our AI match accuracy.
+                    Upload photos of the missing item if you have them. Clear
+                    photos improve our AI match accuracy.
                   </p>
 
                   <ImageUpload
