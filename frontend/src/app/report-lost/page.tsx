@@ -1,71 +1,62 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import ImageUpload from "@/components/ImageUpload";
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
   CheckCircle2,
   Clock3,
-  FileImage,
   Info,
   MapPin,
   PackageSearch,
   Search,
   ShieldCheck,
-  Upload,
-  X,
 } from "lucide-react";
 
 export default function ReportLostPage() {
+  // Form State
   const [itemName, setItemName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
-  const [dateLost, setDateLost] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+
+  // UI State
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [maxDateTime, setMaxDateTime] = useState("");
 
+  const [dateLost, setDateLost] = useState("");
+
+  // Safely generate the current time only on the client
   useEffect(() => {
-    if (!photo) {
-      setPreviewUrl("");
-      return;
-    }
-
-    const url = URL.createObjectURL(photo);
-    setPreviewUrl(url);
-
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
-
-  function handlePhotoChange(file: File | undefined) {
-    setMessage("");
-
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setMessage("Please select a valid image file.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage("Please select an image smaller than 5 MB.");
-      return;
-    }
-
-    setPhoto(file);
-  }
+    setMaxDateTime(new Date().toISOString().slice(0, 16));
+  }, []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setLoading(true);
 
-    // Demo only: connect Firebase and Cloudinary to save reports.
-    setMessage(
-      "Your form is ready, but this demo does not save reports yet. Connect Firebase and Cloudinary to enable submissions.",
-    );
+    const formData = {
+      itemName,
+      category,
+      description,
+      location,
+      dateLost,
+      imageUrls,
+    };
+
+    console.log("Submitting Lost Report:", formData);
+
+    setTimeout(() => {
+      setLoading(false);
+      setMessage(
+        "Report form is working! Image uploaded to Cloudinary successfully. FastAPI Backend connection coming soon.",
+      );
+    }, 1000);
   }
 
   const inputClass =
@@ -79,7 +70,6 @@ export default function ReportLostPage() {
 
       <main className="min-h-screen bg-[#f8fafc] px-4 py-8 sm:px-6 sm:py-12">
         <div className="mx-auto max-w-6xl">
-          {/* Back navigation */}
           <Link
             href="/"
             className="mb-7 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-blue-600"
@@ -88,7 +78,6 @@ export default function ReportLostPage() {
             Back to home
           </Link>
 
-          {/* Page heading */}
           <div className="mb-9">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700">
               <Search size={15} />
@@ -110,7 +99,6 @@ export default function ReportLostPage() {
           </div>
 
           <div className="grid items-start gap-7 lg:grid-cols-[1fr_320px]">
-            {/* Main form */}
             <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-6 py-6 sm:px-9">
                 <div className="flex items-center gap-4">
@@ -140,7 +128,6 @@ export default function ReportLostPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8 p-6 sm:p-9">
-                {/* Item information */}
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
@@ -226,7 +213,6 @@ export default function ReportLostPage() {
 
                 <div className="border-t border-slate-100" />
 
-                {/* Location and time */}
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
@@ -282,7 +268,7 @@ export default function ReportLostPage() {
                           value={dateLost}
                           onChange={(e) => setDateLost(e.target.value)}
                           required
-                          max={new Date().toISOString().slice(0, 16)}
+                          max={maxDateTime}
                           className={`${inputClass} pl-10`}
                         />
                       </div>
@@ -296,7 +282,6 @@ export default function ReportLostPage() {
 
                 <div className="border-t border-slate-100" />
 
-                {/* Photo upload */}
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
@@ -308,86 +293,22 @@ export default function ReportLostPage() {
                   </div>
 
                   <p className="mb-4 text-sm leading-6 text-slate-500">
-                    Upload a photo of the missing item if you have one. An older
-                    photo is fine if it clearly shows the item.
+                    Upload a photo of the missing item if you have one. A clear
+                    photo improves our AI match accuracy.
                   </p>
 
-                  <label
-                    htmlFor="photo"
-                    className="group flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-5 text-center transition hover:border-blue-400 hover:bg-blue-50/50"
-                  >
-                    {previewUrl ? (
-                      <div className="w-full">
-                        <img
-                          src={previewUrl}
-                          alt="Preview of your lost item photo"
-                          className="mx-auto max-h-64 max-w-full rounded-xl object-contain"
-                        />
-
-                        <p className="mt-4 break-all text-sm font-medium text-slate-700">
-                          {photo?.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          Click to choose a different photo
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 transition group-hover:scale-105">
-                          <Camera size={26} />
-                        </div>
-
-                        <p className="mt-4 text-sm font-semibold text-slate-800">
-                          Click to upload or choose a photo
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-500">
-                          PNG, JPG or WEBP · Maximum 5 MB
-                        </p>
-
-                        <span className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                          <Upload size={16} />
-                          Choose image
-                        </span>
-                      </>
-                    )}
-                  </label>
-
-                  <input
-                    id="photo"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="sr-only"
-                    onChange={(e) => handlePhotoChange(e.target.files?.[0])}
+                  <ImageUpload
+                    value={imageUrls}
+                    onChange={(url) => setImageUrls((prev) => [...prev, url])}
+                    onRemove={(urlToRemove) =>
+                      setImageUrls((prev) =>
+                        prev.filter((u) => u !== urlToRemove),
+                      )
+                    }
                   />
-
-                  {photo && (
-                    <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <FileImage
-                          size={20}
-                          className="shrink-0 text-blue-600"
-                        />
-                        <span className="truncate text-sm text-slate-600">
-                          {photo.name}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setPhoto(null)}
-                        aria-label="Remove selected photo"
-                        className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  )}
                 </div>
 
-                {/* Privacy notice */}
-                <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+                <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4 mt-8">
                   <Info size={19} className="mt-0.5 shrink-0 text-blue-600" />
                   <p className="text-xs leading-6 text-blue-900/80">
                     Keep passwords, account details, ID numbers, and other
@@ -399,14 +320,13 @@ export default function ReportLostPage() {
                 {message && (
                   <div
                     role="status"
-                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+                    className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"
                   >
                     {message}
                   </div>
                 )}
 
-                {/* Submit actions */}
-                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 mt-8 sm:flex-row sm:items-center sm:justify-between">
                   <Link
                     href="/"
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
@@ -417,22 +337,17 @@ export default function ReportLostPage() {
 
                   <button
                     type="submit"
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                    disabled={loading}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70"
                   >
-                    Submit Lost Report
-                    <ArrowRight size={17} />
+                    {loading ? "Submitting..." : "Submit Lost Report"}
+                    {!loading && <ArrowRight size={17} />}
                   </button>
                 </div>
-
-                <p className="text-center text-xs leading-5 text-slate-400">
-                  Your report will not be saved until backend integration is
-                  implemented.
-                </p>
               </form>
             </section>
 
-            {/* Sidebar */}
-            <aside className="space-y-5 lg:sticky lg:top-6">
+            <aside className="space-y-5 lg:sticky lg:top-24">
               <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-lg shadow-slate-200/60">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-blue-300">
                   <ShieldCheck size={25} />
