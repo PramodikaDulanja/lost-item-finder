@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import {
+  onAuthStateChanged,
+  signOut,
+  User as FirebaseUser,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   Search,
   Menu,
@@ -10,12 +16,35 @@ import {
   UserRound,
   ChevronDown,
   PackageSearch,
+  LogOut,
 } from "lucide-react";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const closeMenu = () => setMobileMenuOpen(false);
+
+  useEffect(() => {
+    // Listen for authentication state changes
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      closeMenu();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
@@ -111,22 +140,40 @@ export default function Navbar() {
           </div>
 
           {/* Desktop actions */}
-          <div className="hidden shrink-0 items-center gap-3 sm:flex">
-            <Link
-              href="/signin"
-              className="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
-            >
-              <UserRound size={17} />
-              Sign In
-            </Link>
+          <div className="hidden shrink-0 items-center gap-4 sm:flex">
+            {!loading &&
+              (user ? (
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-slate-700">
+                    Hi, {user.displayName || "User"}
+                  </span>
+                  <button
+                    onClick={handleSignOut}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <LogOut size={17} />
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Link
+                    href="/signin"
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
+                  >
+                    <UserRound size={17} />
+                    Sign In
+                  </Link>
 
-            <Link
-              href="/signup"
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-slate-900/10 transition hover:bg-blue-600"
-            >
-              <PlusCircle size={17} />
-              Get Started
-            </Link>
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-slate-900/10 transition hover:bg-blue-600"
+                  >
+                    <PlusCircle size={17} />
+                    Get Started
+                  </Link>
+                </>
+              ))}
           </div>
 
           {/* Mobile menu button */}
@@ -182,23 +229,45 @@ export default function Navbar() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
-            <Link
-              href="/signin"
-              onClick={closeMenu}
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <UserRound size={16} />
-              Sign In
-            </Link>
+            {!loading &&
+              (user ? (
+                <>
+                  <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700">
+                    <UserRound size={16} />
+                    <span className="truncate">
+                      {user.displayName || "User"}
+                    </span>
+                  </div>
 
-            <Link
-              href="/signup"
-              onClick={closeMenu}
-              className="flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-3 text-sm font-semibold text-white transition hover:bg-blue-600"
-            >
-              Get Started
-              <PlusCircle size={16} />
-            </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                  >
+                    <LogOut size={16} />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/signin"
+                    onClick={closeMenu}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <UserRound size={16} />
+                    Sign In
+                  </Link>
+
+                  <Link
+                    href="/signup"
+                    onClick={closeMenu}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-3 text-sm font-semibold text-white transition hover:bg-blue-600"
+                  >
+                    Get Started
+                    <PlusCircle size={16} />
+                  </Link>
+                </>
+              ))}
           </div>
         </div>
       )}

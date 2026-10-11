@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   Mail,
   Lock,
@@ -13,10 +16,39 @@ import {
   MapPin,
   PackageSearch,
   ArrowLeft,
+  AlertCircle,
 } from "lucide-react";
 
 export default function SignInPage() {
+  const router = useRouter();
+
+  // UI State
   const [showPassword, setShowPassword] = useState(false);
+
+  // Form State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Auth State
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Redirect to homepage on successful login
+      router.push("/");
+    } catch (err: any) {
+      // Show a generic, secure error message
+      setError("Invalid email or password. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-10 sm:px-6 lg:py-14">
@@ -113,7 +145,14 @@ export default function SignInPage() {
               </p>
             </div>
 
-            <form className="space-y-5">
+            {error && (
+              <div className="mb-5 flex items-center gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                <AlertCircle size={18} />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSignIn} className="space-y-5">
               <div className="space-y-2">
                 <label
                   htmlFor="email"
@@ -131,6 +170,8 @@ export default function SignInPage() {
                     id="email"
                     name="email"
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     placeholder="you@example.com"
                     required
@@ -165,6 +206,8 @@ export default function SignInPage() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     placeholder="Enter your password"
                     required
@@ -186,13 +229,16 @@ export default function SignInPage() {
 
               <button
                 type="submit"
-                className="group flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                disabled={loading}
+                className="group flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70"
               >
-                Sign in to your account
-                <ArrowRight
-                  size={18}
-                  className="transition-transform group-hover:translate-x-1"
-                />
+                {loading ? "Signing in..." : "Sign in to your account"}
+                {!loading && (
+                  <ArrowRight
+                    size={18}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                )}
               </button>
             </form>
 

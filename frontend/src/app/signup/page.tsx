@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   Mail,
   Lock,
@@ -15,11 +18,59 @@ import {
   HeartHandshake,
   CheckCircle2,
   ArrowLeft,
+  AlertCircle,
 } from "lucide-react";
 
 export default function SignUpPage() {
+  const router = useRouter();
+
+  // UI State
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Form State
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Auth State
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      // Save the user's full name to their Firebase profile
+      await updateProfile(userCredential.user, { displayName: name });
+      // Redirect to homepage on success
+      router.push("/");
+    } catch (err: any) {
+      // Clean up standard Firebase error messages for the user
+      setError(
+        err.message
+          .replace("Firebase: ", "")
+          .replace("Error (auth/", "")
+          .replace(").", ""),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-slate-50 px-4 py-10 sm:px-6 lg:py-14">
@@ -117,7 +168,14 @@ export default function SignUpPage() {
               </p>
             </div>
 
-            <form className="space-y-4">
+            {error && (
+              <div className="mb-5 flex items-center gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                <AlertCircle size={18} />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSignUp} className="space-y-4">
               {/* Full name */}
               <div className="space-y-2">
                 <label
@@ -136,6 +194,8 @@ export default function SignUpPage() {
                     id="fullName"
                     name="fullName"
                     type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     autoComplete="name"
                     placeholder="Enter your full name"
                     required
@@ -163,6 +223,8 @@ export default function SignUpPage() {
                     id="email"
                     name="email"
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     placeholder="you@example.com"
                     required
@@ -189,6 +251,8 @@ export default function SignUpPage() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     autoComplete="new-password"
                     placeholder="Create a strong password"
                     required
@@ -231,6 +295,8 @@ export default function SignUpPage() {
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
                     placeholder="Enter your password again"
                     required
@@ -260,13 +326,16 @@ export default function SignUpPage() {
               {/* Submit */}
               <button
                 type="submit"
-                className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                disabled={loading}
+                className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70"
               >
-                Create your account
-                <ArrowRight
-                  size={18}
-                  className="transition-transform group-hover:translate-x-1"
-                />
+                {loading ? "Creating account..." : "Create your account"}
+                {!loading && (
+                  <ArrowRight
+                    size={18}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                )}
               </button>
             </form>
 
