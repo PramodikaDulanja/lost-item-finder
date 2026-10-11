@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   MapPin,
   PackageSearch,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function SignInPage() {
@@ -27,6 +28,7 @@ export default function SignInPage() {
 
           <div className="relative z-10">
             <Link href="/" className="inline-flex items-center gap-3">
+              <ArrowLeft size={17} />
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500">
                 <Search size={23} className="text-white" />
               </div>
