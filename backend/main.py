@@ -22,6 +22,7 @@ class DBLostItem(Base):
     __tablename__ = "lost_items"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True)
     item_name = Column(String, index=True)
     category = Column(String, index=True)
     description = Column(Text)
@@ -33,6 +34,7 @@ class DBFoundItem(Base):
     __tablename__ = "found_items"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True)
     item_name = Column(String, index=True)
     category = Column(String, index=True)
     description = Column(Text)
@@ -63,6 +65,7 @@ app.add_middleware(
 # --- 2. SEPARATE PYDANTIC SCHEMAS ---
 
 class LostItemReport(BaseModel):
+    userId: str
     itemName: str
     category: str
     description: str
@@ -71,6 +74,7 @@ class LostItemReport(BaseModel):
     imageUrls: List[str]
 
 class FoundItemReport(BaseModel):
+    userId: str
     itemName: str
     category: str
     description: str
@@ -84,6 +88,7 @@ class FoundItemReport(BaseModel):
 def submit_lost_report(report: LostItemReport, db: Session = Depends(get_db)):
     try:
         new_item = DBLostItem(
+            user_id=report.userId,
             item_name=report.itemName,
             category=report.category,
             description=report.description,
@@ -102,6 +107,7 @@ def submit_lost_report(report: LostItemReport, db: Session = Depends(get_db)):
 def submit_found_report(report: FoundItemReport, db: Session = Depends(get_db)):
     try:
         new_item = DBFoundItem(
+            user_id=report.userId,
             item_name=report.itemName,
             category=report.category,
             description=report.description,

@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ImageUpload from "@/components/ImageUpload";
+import { auth } from "@/lib/firebase";
 import {
   ArrowLeft,
   ArrowRight,
@@ -40,8 +41,20 @@ export default function ReportLostPage() {
     setLoading(true);
     setMessage("");
 
+    // 1. Get the current logged-in Firebase user
+    // const auth = getAuth();
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      setMessage("Error: You must be logged in to submit a report.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. Attach the user's Firebase UID to the payload
     const formData = {
-      //   itemType: "lost", // <--- Explicitly tagged as a lost item report
+      userId: user.uid,
       itemName,
       category,
       description,
@@ -66,9 +79,7 @@ export default function ReportLostPage() {
 
       const data = await response.json();
       console.log("Saved to Database:", data);
-      setMessage(
-        "Success! Your lost item report has been saved to PostgreSQL[cite: 5].",
-      );
+      setMessage("Success! Your lost item report has been saved.");
 
       // Clear the form fields after successful save
       setItemName("");
@@ -123,7 +134,7 @@ export default function ReportLostPage() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
               Tell us what you lost, where you last saw it, and when it went
               missing. Clear details help you discover potentially matching
-              found-item reports.
+              found-item reports[cite: 5].
             </p>
           </div>
 
@@ -140,7 +151,8 @@ export default function ReportLostPage() {
                       Lost item details
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      Provide the information needed to identify your item.
+                      Provide the information needed to identify your item[cite:
+                      5].
                     </p>
                   </div>
                 </div>
@@ -218,7 +230,7 @@ export default function ReportLostPage() {
 
                       <p className="mt-1.5 text-xs leading-5 text-slate-500">
                         Include the color, brand, distinctive features, and any
-                        other clues that could help identify it.
+                        other clues that could help identify it[cite: 5].
                       </p>
 
                       <textarea
@@ -276,7 +288,7 @@ export default function ReportLostPage() {
                       </div>
 
                       <p className="mt-2 text-xs leading-5 text-slate-400">
-                        Include the building or nearby landmark.
+                        Include the building or nearby landmark[cite: 5].
                       </p>
                     </div>
 
@@ -303,7 +315,7 @@ export default function ReportLostPage() {
                       </div>
 
                       <p className="mt-2 text-xs leading-5 text-slate-400">
-                        Choose when you last remember having it.
+                        Choose when you last remember having it[cite: 5].
                       </p>
                     </div>
                   </div>
@@ -323,7 +335,7 @@ export default function ReportLostPage() {
 
                   <p className="mb-4 text-sm leading-6 text-slate-500">
                     Upload photos of the missing item if you have them. Clear
-                    photos improve our AI match accuracy.
+                    photos improve our AI match accuracy[cite: 5].
                   </p>
 
                   <ImageUpload
@@ -342,14 +354,19 @@ export default function ReportLostPage() {
                   <p className="text-xs leading-6 text-blue-900/80">
                     Keep passwords, account details, ID numbers, and other
                     sensitive information out of your public report. Keep some
-                    unique identifying details private to help verify ownership.
+                    unique identifying details private to help verify
+                    ownership[cite: 5].
                   </p>
                 </div>
 
                 {message && (
                   <div
                     role="status"
-                    className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"
+                    className={`mt-4 rounded-xl border p-4 text-sm leading-6 ${
+                      message.includes("Error")
+                        ? "border-rose-200 bg-rose-50 text-rose-900"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    }`}
                   >
                     {message}
                   </div>
@@ -388,7 +405,7 @@ export default function ReportLostPage() {
 
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   Helpful details make it easier to identify your belongings
-                  among found-item reports.
+                  among found-item reports[cite: 5].
                 </p>
 
                 <div className="mt-6 space-y-4">
@@ -398,7 +415,7 @@ export default function ReportLostPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Use a specific item name and category.
+                      Use a specific item name and category[cite: 5].
                     </p>
                   </div>
 
@@ -408,7 +425,8 @@ export default function ReportLostPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Include the last known location and approximate time.
+                      Include the last known location and approximate time[cite:
+                      5].
                     </p>
                   </div>
 
@@ -418,7 +436,8 @@ export default function ReportLostPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Add a clear photo and distinctive details when possible.
+                      Add a clear photo and distinctive details when
+                      possible[cite: 5].
                     </p>
                   </div>
                 </div>
@@ -435,7 +454,7 @@ export default function ReportLostPage() {
                       Stay hopeful
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
-                      Your details could make a difference.
+                      Your details could make a difference[cite: 5].
                     </p>
                   </div>
                 </div>
@@ -454,7 +473,7 @@ export default function ReportLostPage() {
           </div>
 
           <footer className="mt-12 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-            Lost Item Network · Helping belongings find their way home.
+            Lost Item Network · Helping belongings find their way home[cite: 5].
           </footer>
         </div>
       </main>

@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import ImageUpload from "@/components/ImageUpload";
+import { auth } from "@/lib/firebase";
 import {
   ArrowLeft,
   ArrowRight,
@@ -39,7 +40,19 @@ export default function ReportFoundPage() {
     setLoading(true);
     setMessage("");
 
+    // 1. Get the current logged-in Firebase user
+    // const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      setMessage("Error: You must be logged in to submit a report.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. Attach the user's Firebase UID to the payload
     const formData = {
+      userId: user.uid,
       itemName,
       category,
       description,
@@ -65,7 +78,7 @@ export default function ReportFoundPage() {
       const data = await response.json();
       console.log("Found Item Saved to Database:", data);
       setMessage(
-        "Success! Thank you for helping. Your found item report has been saved to PostgreSQL.",
+        "Success! Thank you for helping. Your found item report has been saved.",
       );
 
       // Clear the form fields after successful save
@@ -119,8 +132,8 @@ export default function ReportFoundPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
-              Share a few details about the item you found[cite: 5]. Your report
-              may help someone reconnect with a valuable belonging[cite: 5].
+              Share a few details about the item you found. Your report may help
+              someone reconnect with a valuable belonging.
             </p>
           </div>
 
@@ -137,7 +150,7 @@ export default function ReportFoundPage() {
                       Found item details
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      Complete the fields below to prepare your report[cite: 5].
+                      Complete the fields below to prepare your report.
                     </p>
                   </div>
                 </div>
@@ -212,8 +225,8 @@ export default function ReportFoundPage() {
                       </label>
                       <p className="mt-1.5 text-xs leading-5 text-slate-500">
                         Include the color, brand, condition, or other
-                        identifying features[cite: 5]. Keep unique identifying
-                        details private where possible[cite: 5].
+                        identifying features. Keep unique identifying details
+                        private where possible.
                       </p>
                       <textarea
                         id="description"
@@ -266,7 +279,7 @@ export default function ReportFoundPage() {
                         />
                       </div>
                       <p className="mt-2 text-xs leading-5 text-slate-400">
-                        Name the building or public area[cite: 5].
+                        Name the building or public area.
                       </p>
                     </div>
 
@@ -290,7 +303,7 @@ export default function ReportFoundPage() {
                         />
                       </div>
                       <p className="mt-2 text-xs leading-5 text-slate-400">
-                        When did you find the item?[cite: 5]
+                        When did you find the item?
                       </p>
                     </div>
                   </div>
@@ -307,9 +320,8 @@ export default function ReportFoundPage() {
                   </div>
 
                   <p className="mb-4 text-sm leading-6 text-slate-500">
-                    A clear photo can help people recognize their
-                    belongings[cite: 5]. Avoid including personal documents or
-                    sensitive information[cite: 5].
+                    A clear photo can help people recognize their belongings.
+                    Avoid including personal documents or sensitive information.
                   </p>
 
                   <ImageUpload
@@ -328,14 +340,18 @@ export default function ReportFoundPage() {
                   <p className="text-xs leading-6 text-blue-900/80">
                     For everyone&apos;s safety, keep passwords, ID numbers,
                     addresses, and other sensitive information out of your
-                    public report[cite: 5].
+                    public report.
                   </p>
                 </div>
 
                 {message && (
                   <div
                     role="status"
-                    className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"
+                    className={`mt-4 rounded-xl border p-4 text-sm leading-6 ${
+                      message.includes("Error")
+                        ? "border-rose-200 bg-rose-50 text-rose-900"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    }`}
                   >
                     {message}
                   </div>
@@ -374,7 +390,7 @@ export default function ReportFoundPage() {
 
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   A few simple precautions can protect the item and its rightful
-                  owner[cite: 5].
+                  owner.
                 </p>
 
                 <div className="mt-6 space-y-4">
@@ -384,7 +400,7 @@ export default function ReportFoundPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Describe the item honestly and accurately[cite: 5].
+                      Describe the item honestly and accurately.
                     </p>
                   </div>
 
@@ -395,7 +411,7 @@ export default function ReportFoundPage() {
                     />
                     <p className="text-sm leading-6 text-slate-300">
                       Keep some unique details private for ownership
-                      verification[cite: 5].
+                      verification.
                     </p>
                   </div>
 
@@ -405,8 +421,7 @@ export default function ReportFoundPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Arrange a safe handover in an appropriate public
-                      place[cite: 5].
+                      Arrange a safe handover in an appropriate public place.
                     </p>
                   </div>
                 </div>
@@ -422,7 +437,7 @@ export default function ReportFoundPage() {
                       Every report matters
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
-                      Small actions make a difference[cite: 5].
+                      Small actions make a difference.
                     </p>
                   </div>
                 </div>
@@ -441,7 +456,7 @@ export default function ReportFoundPage() {
           </div>
 
           <footer className="mt-12 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-            Lost Item Network · Helping belongings find their way home[cite: 5].
+            Lost Item Network · Helping belongings find their way home.
           </footer>
         </div>
       </main>
