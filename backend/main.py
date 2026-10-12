@@ -11,18 +11,17 @@ from sqlalchemy.dialects.postgresql import ARRAY
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-engine = create_engine(DATABASE_URL)
+# Added connection pooling to prevent connection drops
+engine = create_engine(os.getenv("DATABASE_URL"), pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Database Table
-class DBItemReport(Base):
+# --- 1. SEPARATE DATABASE TABLES ---
+
+class DBLostItem(Base):
     __tablename__ = "lost_items"
     
     id = Column(Integer, primary_key=True, index=True)
-    item_type = Column(String, index=True) # "lost" or "found"
     item_name = Column(String, index=True)
     category = Column(String, index=True)
     description = Column(Text)
@@ -30,6 +29,18 @@ class DBItemReport(Base):
     date_lost = Column(String)
     image_urls = Column(ARRAY(String))
 
+class DBFoundItem(Base):
+    __tablename__ = "found_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    item_name = Column(String, index=True)
+    category = Column(String, index=True)
+    description = Column(Text)
+    location = Column(String)
+    date_found = Column(String) # Renamed to fit the found context
+    image_urls = Column(ARRAY(String))
+
+# Create both tables in Neon
 Base.metadata.create_all(bind=engine)
 
 def get_db():
@@ -49,9 +60,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic schema matching frontend payload
-class ItemReport(BaseModel):
-    itemType: str # "lost" or "found"
+# --- 2. SEPARATE PYDANTIC SCHEMAS ---
+
+class LostItemReport(BaseModel):
     itemName: str
     category: str
     description: str
@@ -59,12 +70,20 @@ class ItemReport(BaseModel):
     dateLost: str
     imageUrls: List[str]
 
-# Shared endpoint for both lost and found items
-@app.post("/api/items")
-def submit_item_report(report: ItemReport, db: Session = Depends(get_db)):
+class FoundItemReport(BaseModel):
+    itemName: str
+    category: str
+    description: str
+    location: str
+    dateLost: str # Keeping as dateLost here just to match your current frontend payload
+    imageUrls: List[str]
+
+# --- 3. SEPARATE API ENDPOINTS ---
+
+@app.post("/api/items/lost")
+def submit_lost_report(report: LostItemReport, db: Session = Depends(get_db)):
     try:
-        new_item = DBItemReport(
-            item_type=report.itemType,
+        new_item = DBLostItem(
             item_name=report.itemName,
             category=report.category,
             description=report.description,
@@ -72,16 +91,27 @@ def submit_item_report(report: ItemReport, db: Session = Depends(get_db)):
             date_lost=report.dateLost,
             image_urls=report.imageUrls
         )
-        
         db.add(new_item)
         db.commit()
-        db.refresh(new_item)
-        
-        return {
-            "status": "success",
-            "message": f"Successfully saved {report.itemType} item to PostgreSQL!",
-            "id": new_item.id
-        }
+        return {"status": "success", "message": "Lost item saved!"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/items/found")
+def submit_found_report(report: FoundItemReport, db: Session = Depends(get_db)):
+    try:
+        new_item = DBFoundItem(
+            item_name=report.itemName,
+            category=report.category,
+            description=report.description,
+            location=report.location,
+            date_found=report.dateLost, # Map frontend 'dateLost' to backend 'date_found'
+            image_urls=report.imageUrls
+        )
+        db.add(new_item)
+        db.commit()
+        return {"status": "success", "message": "Found item saved!"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

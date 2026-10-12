@@ -41,7 +41,7 @@ export default function ReportLostPage() {
     setMessage("");
 
     const formData = {
-      itemType: "lost", // <--- Explicitly tagged as a lost item report
+      //   itemType: "lost", // <--- Explicitly tagged as a lost item report
       itemName,
       category,
       description,
@@ -51,7 +51,7 @@ export default function ReportLostPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:8000/api/items", {
+      const response = await fetch("http://localhost:8000/api/items/lost", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

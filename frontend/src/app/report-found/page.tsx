@@ -1,70 +1,89 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import ImageUpload from "@/components/ImageUpload";
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
   CheckCircle2,
   Clock3,
-  FileImage,
   Info,
   MapPin,
   Package,
   ShieldCheck,
-  Upload,
-  X,
 } from "lucide-react";
 
 export default function ReportFoundPage() {
+  // Form State
   const [itemName, setItemName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [dateFound, setDateFound] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+
+  // UI State
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [maxDateTime, setMaxDateTime] = useState("");
 
+  // Safely generate the current time only on the client
   useEffect(() => {
-    if (!photo) {
-      setPreviewUrl("");
-      return;
-    }
+    setMaxDateTime(new Date().toISOString().slice(0, 16));
+  }, []);
 
-    const url = URL.createObjectURL(photo);
-    setPreviewUrl(url);
-
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    // Demo only: connect Firebase and Cloudinary to save reports.
-    setMessage(
-      "Your form is ready, but this demo does not save reports yet. Connect Firebase and Cloudinary to enable submissions.",
-    );
-  }
-
-  function handlePhotoChange(file: File | undefined) {
+    setLoading(true);
     setMessage("");
 
-    if (!file) return;
+    const formData = {
+      itemName,
+      category,
+      description,
+      location,
+      dateLost: dateFound, // Mapped to the backend's expected field name
+      imageUrls,
+    };
 
-    if (!file.type.startsWith("image/")) {
-      setMessage("Please select an image file.");
-      return;
+    try {
+      const response = await fetch("http://localhost:8000/api/items/found", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to submit report");
+      }
+
+      const data = await response.json();
+      console.log("Found Item Saved to Database:", data);
+      setMessage(
+        "Success! Thank you for helping. Your found item report has been saved to PostgreSQL.",
+      );
+
+      // Clear the form fields after successful save
+      setItemName("");
+      setCategory("");
+      setDescription("");
+      setLocation("");
+      setDateFound("");
+      setImageUrls([]);
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      setMessage(
+        error.message ||
+          "Failed to save report. Make sure your FastAPI backend is running.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage("Please choose an image smaller than 5 MB.");
-      return;
-    }
-
-    setPhoto(file);
   }
 
   const inputClass =
@@ -78,7 +97,6 @@ export default function ReportFoundPage() {
 
       <main className="min-h-screen bg-[#f8fafc] px-4 py-8 sm:px-6 sm:py-12">
         <div className="mx-auto max-w-6xl">
-          {/* Back navigation */}
           <Link
             href="/"
             className="mb-7 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-blue-600"
@@ -87,7 +105,6 @@ export default function ReportFoundPage() {
             Back to home
           </Link>
 
-          {/* Page heading */}
           <div className="mb-9">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700">
               <Package size={15} />
@@ -102,13 +119,12 @@ export default function ReportFoundPage() {
             </h1>
 
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
-              Share a few details about the item you found. Your report may help
-              someone reconnect with a valuable belonging.
+              Share a few details about the item you found[cite: 5]. Your report
+              may help someone reconnect with a valuable belonging[cite: 5].
             </p>
           </div>
 
           <div className="grid items-start gap-7 lg:grid-cols-[1fr_320px]">
-            {/* Main form */}
             <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-6 py-6 sm:px-9">
                 <div className="flex items-center gap-4">
@@ -121,7 +137,7 @@ export default function ReportFoundPage() {
                       Found item details
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      Complete the fields below to prepare your report.
+                      Complete the fields below to prepare your report[cite: 5].
                     </p>
                   </div>
                 </div>
@@ -133,12 +149,11 @@ export default function ReportFoundPage() {
                 </div>
 
                 <p className="mt-2 text-xs text-slate-400">
-                  Item information · Location · Photo
+                  Item information · Location · Photos
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8 p-6 sm:p-9">
-                {/* Item information */}
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
@@ -197,8 +212,8 @@ export default function ReportFoundPage() {
                       </label>
                       <p className="mt-1.5 text-xs leading-5 text-slate-500">
                         Include the color, brand, condition, or other
-                        identifying features. Keep unique identifying details
-                        private where possible.
+                        identifying features[cite: 5]. Keep unique identifying
+                        details private where possible[cite: 5].
                       </p>
                       <textarea
                         id="description"
@@ -220,7 +235,6 @@ export default function ReportFoundPage() {
 
                 <div className="border-t border-slate-100" />
 
-                {/* Location and time */}
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
@@ -252,7 +266,7 @@ export default function ReportFoundPage() {
                         />
                       </div>
                       <p className="mt-2 text-xs leading-5 text-slate-400">
-                        Name the building or public area.
+                        Name the building or public area[cite: 5].
                       </p>
                     </div>
 
@@ -271,12 +285,12 @@ export default function ReportFoundPage() {
                           value={dateFound}
                           onChange={(e) => setDateFound(e.target.value)}
                           required
-                          max={new Date().toISOString().slice(0, 16)}
+                          max={maxDateTime}
                           className={`${inputClass} pl-10`}
                         />
                       </div>
                       <p className="mt-2 text-xs leading-5 text-slate-400">
-                        When did you find the item?
+                        When did you find the item?[cite: 5]
                       </p>
                     </div>
                   </div>
@@ -284,7 +298,6 @@ export default function ReportFoundPage() {
 
                 <div className="border-t border-slate-100" />
 
-                {/* Image upload */}
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
@@ -294,99 +307,41 @@ export default function ReportFoundPage() {
                   </div>
 
                   <p className="mb-4 text-sm leading-6 text-slate-500">
-                    A clear photo can help people recognize their belongings.
-                    Avoid including personal documents or sensitive information.
+                    A clear photo can help people recognize their
+                    belongings[cite: 5]. Avoid including personal documents or
+                    sensitive information[cite: 5].
                   </p>
 
-                  <label
-                    htmlFor="photo"
-                    className="group flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 p-5 text-center transition hover:border-blue-400 hover:bg-blue-50/50"
-                  >
-                    {previewUrl ? (
-                      <div className="w-full">
-                        <img
-                          src={previewUrl}
-                          alt="Preview of the found item"
-                          className="mx-auto max-h-64 max-w-full rounded-xl object-contain"
-                        />
-                        <p className="mt-4 break-all text-sm font-medium text-slate-700">
-                          {photo?.name}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Click to choose a different photo
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 transition group-hover:scale-105">
-                          <Camera size={26} />
-                        </div>
-                        <p className="mt-4 text-sm font-semibold text-slate-800">
-                          Click to upload or choose a photo
-                        </p>
-                        <p className="mt-2 text-xs text-slate-500">
-                          PNG, JPG or WEBP · Maximum 5 MB
-                        </p>
-                        <span className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                          <Upload size={16} />
-                          Choose image
-                        </span>
-                      </>
-                    )}
-                  </label>
-
-                  <input
-                    id="photo"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="sr-only"
-                    onChange={(e) => handlePhotoChange(e.target.files?.[0])}
+                  <ImageUpload
+                    value={imageUrls}
+                    onChange={(url) => setImageUrls((prev) => [...prev, url])}
+                    onRemove={(urlToRemove) =>
+                      setImageUrls((prev) =>
+                        prev.filter((u) => u !== urlToRemove),
+                      )
+                    }
                   />
-
-                  {photo && (
-                    <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <FileImage
-                          size={20}
-                          className="shrink-0 text-blue-600"
-                        />
-                        <span className="truncate text-sm text-slate-600">
-                          {photo.name}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setPhoto(null)}
-                        aria-label="Remove selected photo"
-                        className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  )}
                 </div>
 
-                {/* Notice */}
-                <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+                <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4 mt-8">
                   <Info size={19} className="mt-0.5 shrink-0 text-blue-600" />
                   <p className="text-xs leading-6 text-blue-900/80">
                     For everyone&apos;s safety, keep passwords, ID numbers,
                     addresses, and other sensitive information out of your
-                    public report.
+                    public report[cite: 5].
                   </p>
                 </div>
 
                 {message && (
                   <div
                     role="status"
-                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+                    className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"
                   >
                     {message}
                   </div>
                 )}
 
-                {/* Actions */}
-                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 mt-8 sm:flex-row sm:items-center sm:justify-between">
                   <Link
                     href="/"
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
@@ -397,21 +352,16 @@ export default function ReportFoundPage() {
 
                   <button
                     type="submit"
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                    disabled={loading}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:opacity-70"
                   >
-                    Prepare Found Report
-                    <ArrowRight size={17} />
+                    {loading ? "Submitting..." : "Submit Found Report"}
+                    {!loading && <ArrowRight size={17} />}
                   </button>
                 </div>
-
-                <p className="text-center text-xs leading-5 text-slate-400">
-                  Your report will not be saved until backend integration is
-                  implemented.
-                </p>
               </form>
             </section>
 
-            {/* Sidebar */}
             <aside className="space-y-5 lg:sticky lg:top-6">
               <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-lg shadow-slate-200/60">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-blue-300">
@@ -424,7 +374,7 @@ export default function ReportFoundPage() {
 
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   A few simple precautions can protect the item and its rightful
-                  owner.
+                  owner[cite: 5].
                 </p>
 
                 <div className="mt-6 space-y-4">
@@ -434,7 +384,7 @@ export default function ReportFoundPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Describe the item honestly and accurately.
+                      Describe the item honestly and accurately[cite: 5].
                     </p>
                   </div>
 
@@ -445,7 +395,7 @@ export default function ReportFoundPage() {
                     />
                     <p className="text-sm leading-6 text-slate-300">
                       Keep some unique details private for ownership
-                      verification.
+                      verification[cite: 5].
                     </p>
                   </div>
 
@@ -455,7 +405,8 @@ export default function ReportFoundPage() {
                       className="mt-0.5 shrink-0 text-emerald-400"
                     />
                     <p className="text-sm leading-6 text-slate-300">
-                      Arrange a safe handover in an appropriate public place.
+                      Arrange a safe handover in an appropriate public
+                      place[cite: 5].
                     </p>
                   </div>
                 </div>
@@ -471,7 +422,7 @@ export default function ReportFoundPage() {
                       Every report matters
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
-                      Small actions make a difference.
+                      Small actions make a difference[cite: 5].
                     </p>
                   </div>
                 </div>
@@ -490,7 +441,7 @@ export default function ReportFoundPage() {
           </div>
 
           <footer className="mt-12 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-            Lost Item Network · Helping belongings find their way home.
+            Lost Item Network · Helping belongings find their way home[cite: 5].
           </footer>
         </div>
       </main>
