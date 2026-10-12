@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import ImageUpload from "@/components/ImageUpload";
 import { auth } from "@/lib/firebase";
@@ -19,6 +20,7 @@ import {
 
 export default function ReportLostPage() {
   // Form State
+  const router = useRouter();
   const [itemName, setItemName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -79,7 +81,7 @@ export default function ReportLostPage() {
 
       const data = await response.json();
       console.log("Saved to Database:", data);
-      setMessage("Success! Your lost item report has been saved.");
+      router.push(`/item/lost/${data.id}`);
 
       // Clear the form fields after successful save
       setItemName("");

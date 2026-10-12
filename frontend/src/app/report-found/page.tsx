@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import ImageUpload from "@/components/ImageUpload";
 import { auth } from "@/lib/firebase";
@@ -18,6 +19,7 @@ import {
 
 export default function ReportFoundPage() {
   // Form State
+  const router = useRouter();
   const [itemName, setItemName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -77,9 +79,7 @@ export default function ReportFoundPage() {
 
       const data = await response.json();
       console.log("Found Item Saved to Database:", data);
-      setMessage(
-        "Success! Thank you for helping. Your found item report has been saved.",
-      );
+      router.push(`/item/found/${data.id}`);
 
       // Clear the form fields after successful save
       setItemName("");

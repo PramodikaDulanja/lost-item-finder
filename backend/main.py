@@ -98,7 +98,8 @@ def submit_lost_report(report: LostItemReport, db: Session = Depends(get_db)):
         )
         db.add(new_item)
         db.commit()
-        return {"status": "success", "message": "Lost item saved!"}
+        db.refresh(new_item)
+        return {"status": "success", "message": "Lost item saved!", "id": new_item.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -117,7 +118,24 @@ def submit_found_report(report: FoundItemReport, db: Session = Depends(get_db)):
         )
         db.add(new_item)
         db.commit()
-        return {"status": "success", "message": "Found item saved!"}
+        db.refresh(new_item)
+        return {"status": "success", "message": "Found item saved!", "id": new_item.id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@app.get("/api/items/lost/{item_id}")
+def get_lost_item(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(DBLostItem).filter(DBLostItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+@app.get("/api/items/found/{item_id}")
+def get_found_item(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(DBFoundItem).filter(DBFoundItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
