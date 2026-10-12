@@ -139,3 +139,41 @@ def get_found_item(item_id: int, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
+
+
+@app.get("/api/items")
+def get_all_items(db: Session = Depends(get_db)):
+    try:
+        lost_items = db.query(DBLostItem).all()
+        found_items = db.query(DBFoundItem).all()
+        
+        feed = []
+        for item in lost_items:
+            feed.append({
+                "id": item.id,
+                "type": "lost",
+                "itemName": item.item_name,
+                "category": item.category,
+                "description": item.description,
+                "location": item.location,
+                "date": item.date_lost,
+                "image": item.image_urls[0] if item.image_urls else None
+            })
+            
+        for item in found_items:
+            feed.append({
+                "id": item.id,
+                "type": "found",
+                "itemName": item.item_name,
+                "description": item.description,
+                "category": item.category,
+                "location": item.location,
+                "date": item.date_found,
+                "image": item.image_urls[0] if item.image_urls else None
+            })
+            
+        # Sort newest first
+        feed.sort(key=lambda x: x["date"], reverse=True)
+        return feed
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

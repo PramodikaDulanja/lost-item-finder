@@ -19,99 +19,117 @@ import {
   Smartphone,
   Sparkles,
   Users,
+  HelpCircle,
+  FolderOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-type ItemType = "Lost" | "Found";
-type FilterType = "All" | "Lost" | "Found";
+type FilterType = "All" | "lost" | "found";
 
-interface LostItem {
+// This matches the data structure returning from your FastAPI backend
+interface BackendItem {
   id: number;
-  type: ItemType;
-  title: string;
+  type: "lost" | "found";
+  itemName: string;
   category: string;
-  description: string;
   location: string;
-  time: string;
-  match?: string;
+  date: string;
+  image: string | null;
+  description?: string; // Optional since the feed might not include it yet
+}
+
+// Helper to match your beautiful gradients and icons to the dynamic database categories
+function getCategoryDesign(category: string): {
   icon: LucideIcon;
   iconStyle: string;
   coverStyle: string;
+} {
+  const cat = category.toLowerCase();
+
+  if (cat.includes("bag")) {
+    return {
+      icon: Backpack,
+      iconStyle: "bg-white/90 text-amber-700",
+      coverStyle: "from-amber-100 via-orange-50 to-stone-100",
+    };
+  } else if (cat.includes("electronic") || cat.includes("phone")) {
+    return {
+      icon: Smartphone,
+      iconStyle: "bg-white/90 text-sky-700",
+      coverStyle: "from-sky-100 via-blue-50 to-indigo-100",
+    };
+  } else if (cat.includes("key")) {
+    return {
+      icon: KeyRound,
+      iconStyle: "bg-white/90 text-violet-700",
+      coverStyle: "from-violet-100 via-purple-50 to-slate-100",
+    };
+  } else if (cat.includes("personal") || cat.includes("clothing")) {
+    return {
+      icon: FlaskConical,
+      iconStyle: "bg-white/90 text-emerald-700",
+      coverStyle: "from-emerald-100 via-teal-50 to-cyan-100",
+    };
+  } else if (cat.includes("document")) {
+    return {
+      icon: FolderOpen,
+      iconStyle: "bg-white/90 text-rose-700",
+      coverStyle: "from-rose-100 via-red-50 to-orange-100",
+    };
+  }
+
+  // Default fallback style
+  return {
+    icon: HelpCircle,
+    iconStyle: "bg-white/90 text-slate-700",
+    coverStyle: "from-slate-100 via-gray-50 to-zinc-100",
+  };
 }
 
-const mockItems: LostItem[] = [
-  {
-    id: 1,
-    type: "Lost",
-    title: "Black Nike Backpack",
-    category: "Bags & Accessories",
-    description:
-      "A black backpack reported missing near the university cafeteria.",
-    location: "University Cafeteria",
-    time: "2:30 PM",
-    icon: Backpack,
-    iconStyle: "bg-white/90 text-amber-700",
-    coverStyle: "from-amber-100 via-orange-50 to-stone-100",
-  },
-  {
-    id: 2,
-    type: "Found",
-    title: "Silver iPhone 13",
-    category: "Electronics",
-    description:
-      "A silver smartphone was handed in after being found in the library.",
-    location: "Library, 2nd Floor",
-    time: "1:15 PM",
-    match: "92%",
-    icon: Smartphone,
-    iconStyle: "bg-white/90 text-sky-700",
-    coverStyle: "from-sky-100 via-blue-50 to-indigo-100",
-  },
-  {
-    id: 3,
-    type: "Lost",
-    title: "Keys with Honda Fob",
-    category: "Keys",
-    description: "A set of keys with a Honda key fob was reported missing.",
-    location: "Main Parking Lot",
-    time: "9:00 AM",
-    icon: KeyRound,
-    iconStyle: "bg-white/90 text-violet-700",
-    coverStyle: "from-violet-100 via-purple-50 to-slate-100",
-  },
-  {
-    id: 4,
-    type: "Found",
-    title: "Blue Water Bottle",
-    category: "Personal Items",
-    description: "A blue reusable water bottle was found near the gym lockers.",
-    location: "Gym Locker Room",
-    time: "4:45 PM",
-    match: "65%",
-    icon: FlaskConical,
-    iconStyle: "bg-white/90 text-emerald-700",
-    coverStyle: "from-emerald-100 via-teal-50 to-cyan-100",
-  },
+const filters: { label: string; value: FilterType }[] = [
+  { label: "All Reports", value: "All" },
+  { label: "Lost Items", value: "lost" },
+  { label: "Found Items", value: "found" },
 ];
 
-const filters: FilterType[] = ["All", "Lost", "Found"];
-
 export default function Home() {
+  const [items, setItems] = useState<BackendItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentYear, setCurrentYear] = useState(2026);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+
+    // Fetch live data from your Neon PostgreSQL database
+    async function fetchItems() {
+      try {
+        const res = await fetch("http://localhost:8000/api/items");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        setItems(data);
+      } catch (error) {
+        console.error("Error fetching items:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchItems();
+  }, []);
 
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return mockItems.filter((item) => {
+    return items.filter((item) => {
       const matchesFilter =
         activeFilter === "All" || item.type === activeFilter;
 
       const searchableText = [
-        item.title,
+        item.itemName,
         item.category,
         item.location,
-        item.description,
         item.type,
       ]
         .join(" ")
@@ -121,13 +139,7 @@ export default function Home() {
 
       return matchesFilter && matchesSearch;
     });
-  }, [activeFilter, searchQuery]);
-
-  const [currentYear, setCurrentYear] = useState(2026);
-
-  useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-  }, []);
+  }, [items, activeFilter, searchQuery]);
 
   return (
     <>
@@ -326,96 +338,109 @@ export default function Home() {
               >
                 {filters.map((filter) => (
                   <button
-                    key={filter}
+                    key={filter.value}
                     type="button"
-                    onClick={() => setActiveFilter(filter)}
-                    aria-pressed={activeFilter === filter}
+                    onClick={() => setActiveFilter(filter.value)}
+                    aria-pressed={activeFilter === filter.value}
                     className={`rounded-xl px-5 py-3 text-sm font-semibold transition ${
-                      activeFilter === filter
+                      activeFilter === filter.value
                         ? "bg-slate-900 text-white shadow-sm"
                         : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
-                    {filter === "All"
-                      ? "All Reports"
-                      : filter === "Lost"
-                        ? "Lost Items"
-                        : "Found Items"}
+                    {filter.label}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Item cards */}
-            {filteredItems.length > 0 ? (
+            {loading ? (
+              <div className="mt-7 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+                <p className="text-slate-500">
+                  Loading reports from database...
+                </p>
+              </div>
+            ) : filteredItems.length > 0 ? (
               <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredItems.map((item) => {
-                  const ItemIcon = item.icon;
+                  const {
+                    icon: ItemIcon,
+                    iconStyle,
+                    coverStyle,
+                  } = getCategoryDesign(item.category);
+                  const isLost = item.type === "lost";
 
                   return (
                     <Link
-                      href={`/item/${item.id}`}
-                      key={item.id}
-                      className="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/60 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                      href={`/item/${item.type}/${item.id}`}
+                      key={`${item.type}-${item.id}`}
+                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/60 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                     >
-                      {/* Item illustration */}
+                      {/* Item Image or Gradient Cover */}
                       <div
-                        className={`relative flex h-52 items-center justify-center overflow-hidden bg-gradient-to-br ${item.coverStyle}`}
+                        className={`relative flex h-52 items-center justify-center overflow-hidden ${
+                          item.image
+                            ? "bg-slate-100"
+                            : `bg-gradient-to-br ${coverStyle}`
+                        }`}
                       >
-                        <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full border border-white/60" />
-                        <div className="absolute -bottom-14 -left-8 h-40 w-40 rounded-full border border-white/60" />
-
-                        <div
-                          className={`relative flex h-24 w-24 items-center justify-center rounded-[2rem] shadow-lg shadow-slate-900/5 transition duration-300 group-hover:scale-105 ${item.iconStyle}`}
-                        >
-                          <ItemIcon size={43} strokeWidth={1.5} />
-                        </div>
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.itemName}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <>
+                            <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full border border-white/60" />
+                            <div className="absolute -bottom-14 -left-8 h-40 w-40 rounded-full border border-white/60" />
+                            <div
+                              className={`relative flex h-24 w-24 items-center justify-center rounded-[2rem] shadow-lg shadow-slate-900/5 transition duration-300 group-hover:scale-105 ${iconStyle}`}
+                            >
+                              <ItemIcon size={43} strokeWidth={1.5} />
+                            </div>
+                          </>
+                        )}
 
                         <div className="absolute left-4 top-4">
                           <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
-                              item.type === "Lost"
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wider ${
+                              isLost
                                 ? "border-rose-200 bg-white/95 text-rose-700"
                                 : "border-emerald-200 bg-white/95 text-emerald-700"
                             }`}
                           >
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${
-                                item.type === "Lost"
-                                  ? "bg-rose-500"
-                                  : "bg-emerald-500"
+                                isLost ? "bg-rose-500" : "bg-emerald-500"
                               }`}
                             />
                             {item.type}
                           </span>
                         </div>
 
-                        {item.match && (
-                          <div className="absolute right-3 top-3 rounded-full border border-blue-200 bg-white/95 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm">
-                            {item.match} possible match
-                          </div>
-                        )}
-
-                        <div className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-slate-600 opacity-0 shadow-sm transition group-hover:opacity-100">
+                        <div className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-600 opacity-0 shadow-sm transition group-hover:opacity-100">
                           <ArrowUpRight size={18} />
                         </div>
                       </div>
 
                       {/* Item information */}
-                      <div className="p-5">
+                      <div className="flex flex-1 flex-col p-5">
                         <p className="text-xs font-medium text-slate-400">
                           {item.category}
                         </p>
 
                         <h3 className="mt-2 truncate text-lg font-bold tracking-tight text-slate-900">
-                          {item.title}
+                          {item.itemName}
                         </h3>
 
-                        <p className="mt-2 min-h-[40px] text-sm leading-5 text-slate-500">
-                          {item.description}
+                        <p className="mt-2 min-h-[40px] text-sm leading-5 text-slate-500 line-clamp-2">
+                          {item.description ||
+                            "Click to view full item details and description."}
                         </p>
 
-                        <div className="mt-5 space-y-3 border-t border-slate-100 pt-4">
+                        <div className="mt-auto space-y-3 border-t border-slate-100 pt-4">
                           <div className="flex items-start gap-2.5 text-sm text-slate-500">
                             <MapPin
                               size={17}
@@ -431,7 +456,9 @@ export default function Home() {
                               size={17}
                               className="shrink-0 text-slate-400"
                             />
-                            <span>{item.time}</span>
+                            <span>
+                              {new Date(item.date).toLocaleDateString()}
+                            </span>
                           </div>
                         </div>
 
