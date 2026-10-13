@@ -12,8 +12,21 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from typing import Optional
 import shutil
 import json
+import cloudinary
+import cloudinary.uploader
 
+import cloudinary.api
+
+# Load environment variables from the .env file
 load_dotenv()
+
+# Configure Cloudinary using the loaded credentials
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET')
+)
+
 
 # Added connection pooling to prevent connection drops
 engine = create_engine(os.getenv("DATABASE_URL"),
@@ -261,7 +274,6 @@ async def update_item(
     category: str = Form(None),
     location: str = Form(None),
     description: str = Form(None),
-    # JSON array of URLs the user didn't delete
     retained_images: str = Form("[]"),
     new_images: List[UploadFile] = File(None),
     db: Session = Depends(get_db)
@@ -294,18 +306,16 @@ async def update_item(
         except:
             kept_urls = []
 
-        # 2. Save any newly added images
+        # 2. Upload newly added images to Cloudinary
         uploaded_urls = []
         if new_images:
             for img in new_images:
-                if img.filename:  # check if actually a file
-                    file_location = f"uploads/{img.filename}"
-                    with open(file_location, "wb+") as file_object:
-                        shutil.copyfileobj(img.file, file_object)
-                    uploaded_urls.append(
-                        f"http://127.0.0.1:8000/{file_location}")
+                if img.filename:
+                    # Upload directly to Cloudinary instead of a local folder
+                    result = cloudinary.uploader.upload(img.file)
+                    uploaded_urls.append(result.get("secure_url"))
 
-        # 3. Combine kept existing images with new ones
+        # 3. Combine kept existing images with new Cloudinary URLs
         item.image_urls = kept_urls + uploaded_urls
 
         db.commit()
