@@ -107,6 +107,7 @@ export default function Home() {
     async function fetchItems() {
       try {
         const res = await fetch("http://localhost:8000/api/items");
+        // const res = await fetch("http://127.0.0.1:8000/api/items");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setItems(data);

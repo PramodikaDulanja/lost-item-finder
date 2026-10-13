@@ -17,6 +17,7 @@ import {
   ChevronDown,
   PackageSearch,
   LogOut,
+  Package, // Added for the My Items icon
 } from "lucide-react";
 
 export default function Navbar() {
@@ -143,17 +144,51 @@ export default function Navbar() {
           <div className="hidden shrink-0 items-center gap-4 sm:flex">
             {!loading &&
               (user ? (
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-slate-700">
-                    Hi, {user.displayName || "User"}
-                  </span>
+                <div className="group relative">
+                  {/* User Profile Button */}
                   <button
-                    onClick={handleSignOut}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                    type="button"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
-                    <LogOut size={17} />
-                    Sign Out
+                    <UserRound size={17} />
+                    <span className="max-w-[120px] truncate">
+                      {user.displayName || "User"}
+                    </span>
+                    <ChevronDown
+                      size={15}
+                      className="text-slate-400 transition-transform group-hover:rotate-180"
+                    />
                   </button>
+
+                  {/* User Dropdown Menu */}
+                  <div className="invisible absolute right-0 top-full z-50 w-60 translate-y-2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl shadow-slate-900/10">
+                      <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {user.displayName || "User"}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">
+                          {user.email}
+                        </p>
+                      </div>
+                      <div className="p-2">
+                        <Link
+                          href="/my-items"
+                          className="flex items-center gap-3 rounded-xl p-2.5 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          <Package size={17} className="text-blue-600" />
+                          My Items
+                        </Link>
+                        <button
+                          onClick={handleSignOut}
+                          className="mt-1 flex w-full items-center gap-3 rounded-xl p-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 hover:text-red-700"
+                        >
+                          <LogOut size={17} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -226,6 +261,18 @@ export default function Navbar() {
               <PackageSearch size={17} />
               Report a Found Item
             </Link>
+
+            {/* Mobile My Items Link (Only visible if logged in) */}
+            {!loading && user && (
+              <Link
+                href="/my-items"
+                onClick={closeMenu}
+                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-600"
+              >
+                <Package size={17} />
+                My Items
+              </Link>
+            )}
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">

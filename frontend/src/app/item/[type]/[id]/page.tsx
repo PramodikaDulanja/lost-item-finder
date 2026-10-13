@@ -35,6 +35,7 @@ export default function ItemDetailsPage({
       try {
         const res = await fetch(
           `http://localhost:8000/api/items/${resolvedParams.type}/${resolvedParams.id}`,
+          // const res = await fetch(`http://127.0.0.1:8000/api/items/${resolvedParams.type}/${resolvedParams.id}`);
         );
         if (!res.ok) throw new Error("Item not found");
         const data = await res.json();
