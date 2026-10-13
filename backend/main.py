@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile,  File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -9,8 +9,9 @@ from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.dialects.postgresql import ARRAY
 
-from pydantic import BaseModel
 from typing import Optional
+import shutil
+import json
 
 load_dotenv()
 
@@ -252,9 +253,19 @@ def delete_item(item_type: str, item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Add this endpoint at the bottom with your other routes
 @app.put("/api/items/{item_type}/{item_id}")
-def update_item(item_type: str, item_id: int, item_data: ItemUpdate, db: Session = Depends(get_db)):
+async def update_item(
+    item_type: str,
+    item_id: int,
+    item_name: str = Form(None),
+    category: str = Form(None),
+    location: str = Form(None),
+    description: str = Form(None),
+    # JSON array of URLs the user didn't delete
+    retained_images: str = Form("[]"),
+    new_images: List[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
     try:
         if item_type == "lost":
             item = db.query(DBLostItem).filter(
@@ -268,10 +279,34 @@ def update_item(item_type: str, item_id: int, item_data: ItemUpdate, db: Session
         if not item:
             raise HTTPException(status_code=404, detail="Item not found")
 
-        # Update only the fields that were provided
-        update_data = item_data.dict(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(item, key, value)
+        if item_name:
+            item.item_name = item_name
+        if category:
+            item.category = category
+        if location:
+            item.location = location
+        if description:
+            item.description = description
+
+        # 1. Parse the images the user chose to keep
+        try:
+            kept_urls = json.loads(retained_images)
+        except:
+            kept_urls = []
+
+        # 2. Save any newly added images
+        uploaded_urls = []
+        if new_images:
+            for img in new_images:
+                if img.filename:  # check if actually a file
+                    file_location = f"uploads/{img.filename}"
+                    with open(file_location, "wb+") as file_object:
+                        shutil.copyfileobj(img.file, file_object)
+                    uploaded_urls.append(
+                        f"http://127.0.0.1:8000/{file_location}")
+
+        # 3. Combine kept existing images with new ones
+        item.image_urls = kept_urls + uploaded_urls
 
         db.commit()
         return {"status": "success", "message": "Item updated successfully"}
