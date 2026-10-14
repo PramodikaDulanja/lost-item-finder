@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   AlertCircle,
+  Phone,
 } from "lucide-react";
 
 export default function SignUpPage() {
@@ -31,6 +32,7 @@ export default function SignUpPage() {
   // Form State
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -50,17 +52,37 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
+      // 1. Create account in Firebase
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
         password,
       );
-      // Save the user's full name to their Firebase profile
-      await updateProfile(userCredential.user, { displayName: name });
+      
+      // 2. Save the user's full name to their Firebase profile
+      await updateProfile(userCredential.user, { 
+        displayName: name 
+      });
+
+      // 3. Save the user and their contact number to PostgreSQL database
+      const res = await fetch("http://localhost:8000/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firebase_uid: userCredential.user.uid,
+          name: name,
+          email: email,
+          contact_number: contactNumber,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to save user to PostgreSQL database");
+      }
+      
       // Redirect to homepage on success
       router.push("/");
     } catch (err: any) {
-      // Clean up standard Firebase error messages for the user
       setError(
         err.message
           .replace("Firebase: ", "")
@@ -233,6 +255,27 @@ export default function SignUpPage() {
                 </div>
               </div>
 
+              {/* Contact Number */}
+              <div className="space-y-2">
+                <label htmlFor="contactNumber" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Contact Number <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    id="contactNumber" 
+                    name="contactNumber" 
+                    type="tel"
+                    required 
+                    maxLength={15}
+                    value={contactNumber} 
+                    onChange={(e) => setContactNumber(e.target.value)} 
+                    placeholder="e.g. +94 77 123 4567"
+                    className="w-full rounded-xl border border-slate-200 bg-white/50 py-3.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                  />
+                </div>
+              </div>
+              
               {/* Password */}
               <div className="space-y-2">
                 <label
@@ -263,18 +306,13 @@ export default function SignUpPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-
-                <p className="text-xs text-slate-400">
-                  Use at least 8 characters.
-                </p>
+                <p className="text-xs text-slate-400">Use at least 8 characters.</p>
               </div>
 
               {/* Confirm password */}
@@ -307,18 +345,10 @@ export default function SignUpPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    aria-label={
-                      showConfirmPassword
-                        ? "Hide confirm password"
-                        : "Show confirm password"
-                    }
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>

@@ -11,7 +11,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
-  Info,
   MapPin,
   Package,
   ShieldCheck,
@@ -42,8 +41,6 @@ export default function ReportFoundPage() {
     setLoading(true);
     setMessage("");
 
-    // 1. Get the current logged-in Firebase user
-    // const auth = getAuth();
     const user = auth.currentUser;
 
     if (!user) {
@@ -52,14 +49,13 @@ export default function ReportFoundPage() {
       return;
     }
 
-    // 2. Attach the user's Firebase UID to the payload
     const formData = {
       userId: user.uid,
       itemName,
       category,
       description,
       location,
-      dateLost: dateFound, // Mapped to the backend's expected field name
+      dateLost: dateFound, 
       imageUrls,
     };
 
@@ -74,20 +70,22 @@ export default function ReportFoundPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to submit report");
+        
+        // Smart error parser to prevent [object Object]
+        let errMsg = "Failed to submit report";
+        if (errorData.detail) {
+          if (typeof errorData.detail === "string") {
+            errMsg = errorData.detail;
+          } else if (Array.isArray(errorData.detail)) {
+            errMsg = "Missing fields: " + errorData.detail.map((err: any) => err.loc[err.loc.length - 1]).join(", ");
+          }
+        }
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
-      console.log("Found Item Saved to Database:", data);
       router.push(`/item/found/${data.id}`);
 
-      // Clear the form fields after successful save
-      setItemName("");
-      setCategory("");
-      setDescription("");
-      setLocation("");
-      setDateFound("");
-      setImageUrls([]);
     } catch (error: any) {
       console.error("Submission error:", error);
       setMessage(
@@ -154,16 +152,6 @@ export default function ReportFoundPage() {
                     </p>
                   </div>
                 </div>
-
-                <div className="mt-6 flex items-center gap-3">
-                  <div className="h-1.5 flex-1 rounded-full bg-blue-600" />
-                  <div className="h-1.5 flex-1 rounded-full bg-slate-100" />
-                  <div className="h-1.5 flex-1 rounded-full bg-slate-100" />
-                </div>
-
-                <p className="mt-2 text-xs text-slate-400">
-                  Item information · Location · Photos
-                </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8 p-6 sm:p-9">
@@ -206,9 +194,7 @@ export default function ReportFoundPage() {
                           Select an item category
                         </option>
                         <option value="Electronics">Electronics</option>
-                        <option value="Bags & Accessories">
-                          Bags & Accessories
-                        </option>
+                        <option value="Bags & Accessories">Bags & Accessories</option>
                         <option value="Keys">Keys</option>
                         <option value="Documents">Documents & Cards</option>
                         <option value="Clothing">Clothing</option>
@@ -220,14 +206,8 @@ export default function ReportFoundPage() {
 
                     <div>
                       <label htmlFor="description" className={labelClass}>
-                        Detailed description{" "}
-                        <span className="text-rose-500">*</span>
+                        Detailed description <span className="text-rose-500">*</span>
                       </label>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                        Include the color, brand, condition, or other
-                        identifying features. Keep unique identifying details
-                        private where possible.
-                      </p>
                       <textarea
                         id="description"
                         value={description}
@@ -239,9 +219,6 @@ export default function ReportFoundPage() {
                         placeholder="Describe what you found and any visible features..."
                         className={`${inputClass} resize-y`}
                       />
-                      <p className="mt-2 text-right text-xs text-slate-400">
-                        {description.length}/1000 characters
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -253,9 +230,7 @@ export default function ReportFoundPage() {
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-700">
                       02
                     </span>
-                    <h3 className="font-bold text-slate-900">
-                      Where and when?
-                    </h3>
+                    <h3 className="font-bold text-slate-900">Where and when?</h3>
                   </div>
 
                   <div className="grid gap-5 sm:grid-cols-2">
@@ -264,10 +239,7 @@ export default function ReportFoundPage() {
                         Location found <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
-                        <MapPin
-                          size={18}
-                          className="absolute left-3.5 top-[26px] text-slate-400"
-                        />
+                        <MapPin size={18} className="absolute left-3.5 top-[26px] text-slate-400" />
                         <input
                           id="location"
                           value={location}
@@ -278,9 +250,6 @@ export default function ReportFoundPage() {
                           className={`${inputClass} pl-10`}
                         />
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-400">
-                        Name the building or public area.
-                      </p>
                     </div>
 
                     <div>
@@ -288,10 +257,7 @@ export default function ReportFoundPage() {
                         Date and time <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
-                        <Clock3
-                          size={18}
-                          className="absolute left-3.5 top-[26px] text-slate-400"
-                        />
+                        <Clock3 size={18} className="absolute left-3.5 top-[26px] text-slate-400" />
                         <input
                           id="dateFound"
                           type="datetime-local"
@@ -302,9 +268,6 @@ export default function ReportFoundPage() {
                           className={`${inputClass} pl-10`}
                         />
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-400">
-                        When did you find the item?
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -319,34 +282,17 @@ export default function ReportFoundPage() {
                     <h3 className="font-bold text-slate-900">Add a photo</h3>
                   </div>
 
-                  <p className="mb-4 text-sm leading-6 text-slate-500">
-                    A clear photo can help people recognize their belongings.
-                    Avoid including personal documents or sensitive information.
-                  </p>
-
                   <ImageUpload
                     value={imageUrls}
                     onChange={(url) => setImageUrls((prev) => [...prev, url])}
                     onRemove={(urlToRemove) =>
-                      setImageUrls((prev) =>
-                        prev.filter((u) => u !== urlToRemove),
-                      )
+                      setImageUrls((prev) => prev.filter((u) => u !== urlToRemove))
                     }
                   />
                 </div>
 
-                <div className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4 mt-8">
-                  <Info size={19} className="mt-0.5 shrink-0 text-blue-600" />
-                  <p className="text-xs leading-6 text-blue-900/80">
-                    For everyone&apos;s safety, keep passwords, ID numbers,
-                    addresses, and other sensitive information out of your
-                    public report.
-                  </p>
-                </div>
-
                 {message && (
                   <div
-                    role="status"
                     className={`mt-4 rounded-xl border p-4 text-sm leading-6 ${
                       message.includes("Error")
                         ? "border-rose-200 bg-rose-50 text-rose-900"
@@ -378,92 +324,28 @@ export default function ReportFoundPage() {
               </form>
             </section>
 
+            {/* Sidebar stays the same */}
             <aside className="space-y-5 lg:sticky lg:top-6">
               <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-lg shadow-slate-200/60">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-blue-300">
                   <ShieldCheck size={25} />
                 </div>
-
-                <h2 className="mt-5 text-lg font-bold">
-                  Help safely and responsibly
-                </h2>
-
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  A few simple precautions can protect the item and its rightful
-                  owner.
-                </p>
-
+                <h2 className="mt-5 text-lg font-bold">Help safely and responsibly</h2>
                 <div className="mt-6 space-y-4">
                   <div className="flex gap-3">
-                    <CheckCircle2
-                      size={18}
-                      className="mt-0.5 shrink-0 text-emerald-400"
-                    />
-                    <p className="text-sm leading-6 text-slate-300">
-                      Describe the item honestly and accurately.
-                    </p>
+                    <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
+                    <p className="text-sm leading-6 text-slate-300">Describe the item honestly and accurately.</p>
                   </div>
-
                   <div className="flex gap-3">
-                    <CheckCircle2
-                      size={18}
-                      className="mt-0.5 shrink-0 text-emerald-400"
-                    />
-                    <p className="text-sm leading-6 text-slate-300">
-                      Keep some unique details private for ownership
-                      verification.
-                    </p>
+                    <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
+                    <p className="text-sm leading-6 text-slate-300">Keep some unique details private for ownership verification.</p>
                   </div>
-
-                  <div className="flex gap-3">
-                    <CheckCircle2
-                      size={18}
-                      className="mt-0.5 shrink-0 text-emerald-400"
-                    />
-                    <p className="text-sm leading-6 text-slate-300">
-                      Arrange a safe handover in an appropriate public place.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                    <HeartHandshakeIcon />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Every report matters
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Small actions make a difference.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 border-t border-slate-100 pt-4">
-                  <Link
-                    href="/report-lost"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-800"
-                  >
-                    Looking for your item?
-                    <ArrowRight size={16} />
-                  </Link>
                 </div>
               </div>
             </aside>
           </div>
-
-          <footer className="mt-12 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-            Lost Item Network · Helping belongings find their way home.
-          </footer>
         </div>
       </main>
     </>
   );
-}
-
-function HeartHandshakeIcon() {
-  return <CheckCircle2 size={21} />;
 }

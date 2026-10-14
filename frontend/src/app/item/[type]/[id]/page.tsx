@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   MapPin,
@@ -14,14 +15,14 @@ import {
   Copy,
   ChevronRight,
   ChevronLeft,
+  Phone, 
+  MessageCircle,
 } from "lucide-react";
 
-export default function ItemDetailsPage({
-  params,
-}: {
-  params: Promise<{ type: string; id: string }>;
-}) {
-  const resolvedParams = use(params);
+export default function ItemDetailsPage() {
+  const params = useParams();
+  const type = params?.type as string;
+  const id = params?.id as string;
 
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -29,14 +30,12 @@ export default function ItemDetailsPage({
   const [copied, setCopied] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Backend request kept unchanged.
   useEffect(() => {
+    if (!type || !id) return;
+    
     async function fetchItem() {
       try {
-        const res = await fetch(
-          `http://localhost:8000/api/items/${resolvedParams.type}/${resolvedParams.id}`,
-          // const res = await fetch(`http://127.0.0.1:8000/api/items/${resolvedParams.type}/${resolvedParams.id}`);
-        );
+        const res = await fetch(`http://127.0.0.1:8000/api/items/${type}/${id}`);
         if (!res.ok) throw new Error("Item not found");
         const data = await res.json();
         setItem(data);
@@ -47,7 +46,7 @@ export default function ItemDetailsPage({
       }
     }
     fetchItem();
-  }, [resolvedParams.type, resolvedParams.id]);
+  }, [type, id]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -121,7 +120,7 @@ export default function ItemDetailsPage({
     );
   }
 
-  const isFoundItem = resolvedParams.type === "found";
+  const isFoundItem = type === "found";
   const displayType = isFoundItem ? "Found" : "Lost";
   const rawDate = isFoundItem ? item.date_found : item.date_lost;
   const dateObj = rawDate ? new Date(rawDate) : null;
@@ -295,6 +294,37 @@ export default function ItemDetailsPage({
                   {item.description || "No description provided."}
                 </p>
               </div>
+
+              {/* Contact Owner Section */}
+              {item.contact_number && item.contact_number !== "Not provided" && (
+                <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <h3 className="font-bold text-slate-900 mb-2">Contact the Reporter</h3>
+            
+                  <p className="text-sm text-slate-500 mb-5">
+                    If you have information about this item, reach out directly.
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    <a 
+                      href={`https://wa.me/${item.contact_number.replace(/\D/g, '')}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-[#25D366] text-white px-5 py-3 rounded-xl font-semibold hover:bg-[#20bd5a] transition shadow-sm shadow-green-500/20"
+                    >
+                      <MessageCircle size={18} />
+                      Chat on WhatsApp
+                    </a>
+
+                    <a 
+                      href={`tel:${item.contact_number}`} 
+                      className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-xl font-semibold hover:bg-slate-800 transition shadow-sm shadow-slate-900/20"
+                    >
+                      <Phone size={18} />
+                      Call Number
+                    </a>
+                  </div>
+                </div>
+              )}
 
               <div className="border-t border-slate-100 pt-6">
                 <h2 className="mb-4 text-base font-bold text-slate-900">
